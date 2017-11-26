@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "XMLTVGenerator": {
+      "commandName": "Project",
+      "commandLineArgs": "-console"
+    }
+  }
+}

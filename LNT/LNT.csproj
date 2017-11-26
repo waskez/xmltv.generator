@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <Target Name="PostcompileScript" AfterTargets="Build">
+    <Exec Command="cmd /c echo Copy $(AssemblyName).dll to Parsers directory" />
+    <Exec Command="xcopy /y $(MSBuildProjectDirectory)\bin\Debug\netstandard2.0\$(AssemblyName).dll ..\XMLTVGenerator\bin\Debug\netcoreapp2.0\Parsers\" />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ParserContracts\ParserContracts.csproj" />
+  </ItemGroup>
+
+</Project>
