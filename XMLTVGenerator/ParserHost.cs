@@ -19,14 +19,16 @@ namespace XMLTVGenerator
 
         private readonly ILogger logger;
         private readonly HttpClient client;
+        private readonly string baseDirectory;
 
         #endregion
 
         #region Constructor
 
-        public ParserHost(ILogger logger)
+        public ParserHost(ILogger logger, string baseDirectory)
         {
             this.logger = logger;
+            this.baseDirectory = baseDirectory;
             client = new HttpClient();
         }
 
@@ -158,16 +160,30 @@ namespace XMLTVGenerator
 
         #region Build XMLTV
 
-        public void Build(List<Channel> channels)
+        public void Build(List<Channel> channels, bool shuratv)
         {
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", null));
             var root = new XElement("tv", new XAttribute("generator-info-name", "xmltv-generator"));
+
+            XElement shuratvEpg = null;
+            if(shuratv)
+            {
+                shuratvEpg = GetShuraTvChannelsWithProgram();
+                var shuratvChannels = shuratvEpg.Descendants("channel").ToArray();
+                root.Add(shuratvChannels);
+            }            
 
             // Kanāli
             foreach (var ch in channels)
             {
                 var channel = new XElement("channel", new XAttribute("id", ch.Id), new XElement("display-name", ch.Name));
                 root.Add(channel);
+            }
+
+            if (shuratv && shuratvEpg != null)
+            {
+                var shuratvProgram = shuratvEpg.Descendants("programme").ToArray();
+                root.Add(shuratvProgram);
             }
 
             // Kanālu programmas
@@ -225,6 +241,71 @@ namespace XMLTVGenerator
             var utcOffset = tst.GetUtcOffset(newDate);
             var offsetString = ((utcOffset < TimeSpan.Zero) ? " -" : " +") + utcOffset.ToString("hhmm");
             return $"{date:yyyyMMddHHmmss} {offsetString}";
+        }
+
+        #endregion
+
+        #region ShuraTV
+
+        private XElement GetShuraTvChannelsWithProgram()
+        {
+            logger.Information("Sākas ShuraTv xml faila apstrāde ...");
+            var shuratv = new XElement("shuratv");
+
+            var tmpDirectory = Path.Combine(baseDirectory, "temp");
+            var directorySelected = new DirectoryInfo(tmpDirectory);
+            var xmlFile = directorySelected.GetFiles("*.xml")[0];
+
+            var doc = XDocument.Load(xmlFile.FullName);
+            List<string> RussianChannels = new List<string>
+            {
+                "Первый HD",
+                "Россия HD",
+                "Россия 24",
+                "НТВ HD",
+                "РЕН ТВ",
+                "ТНТ Comedy",
+                "ТНТ HD",
+                "СТС",
+                "ТВЦ",
+                "24 док",
+                "24 техно",
+                "Наука 2.0",
+                "Discovery HD",
+                "Discovery Science",
+                "Nat Geo Wild HD",
+                "National Geographic HD"
+            };
+            foreach (var rus in RussianChannels)
+            {
+                var channel = doc.Descendants("display-name").Where(c => c.Value == rus).FirstOrDefault();
+                if (channel != null)
+                {
+                    shuratv.Add(channel.Parent);
+
+                    var channelId = channel.Parent.Attribute("id").Value;
+                    var programList = doc.Descendants("programme").Where(p => p.Attribute("channel").Value == channelId).ToArray();
+                    shuratv.Add(programList);
+                    logger.Information("Kanāla {0} programmas ierakstu skaits: {1}", rus, programList.Length);
+                }
+                else
+                {
+                    logger.Information("Kanāls {0} netika atrasts", rus);
+                }
+            }
+
+            logger.Information("ShuraTv xml fails apstrādāts");
+            ClearDirectory(tmpDirectory);
+            return shuratv;
+        }
+
+        private void ClearDirectory(string directory)
+        {
+            var di = new DirectoryInfo(directory);
+            foreach (FileInfo file in di.GetFiles())
+            {
+                file.Delete();
+            }
         }
 
         #endregion

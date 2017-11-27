@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Configuration;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,12 +25,18 @@ namespace XMLTVGenerator
 
             var console = args.SingleOrDefault(a => a.Equals("-console")) != null;
 
+            IConfiguration config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", true, true)
+                .Build();
+
             ILogger logger = new LoggerConfiguration()
                         .WriteTo.Console()
                         .WriteTo.RollingFile(BaseDirectory + @"\Logs\{Date}.txt")
                         .CreateLogger();
 
-            var host = new ParserHost(logger);
+            var host = new ParserHost(logger, BaseDirectory);
+
+            var loadShuraTv = config["AppSettings:LoadShuraTvEpg"] == "True";
 
             logger.Information(new string('=', 70));
 
@@ -37,6 +44,11 @@ namespace XMLTVGenerator
 
             try
             {
+                if (loadShuraTv)
+                {
+                    ShuraTvEpgLoader.Run(BaseDirectory);
+                }
+
                 var parserDirectory = BaseDirectory + @"\Parsers";
 
                 var parsers = host.LoadParsers(parserDirectory);
@@ -57,9 +69,9 @@ namespace XMLTVGenerator
                         channels.Add(channel);
 
                         logger.Information("Kanāla {0} analizētājs pabeidza darbu", parser.ChannelName);
-                    }
+                    }                   
 
-                    host.Build(channels);
+                    host.Build(channels, loadShuraTv);
                 }
                 else
                 {
