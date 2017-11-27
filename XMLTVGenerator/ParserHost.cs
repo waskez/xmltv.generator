@@ -5,6 +5,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -229,7 +230,9 @@ namespace XMLTVGenerator
             }
 
             doc.Add(root);
-            doc.Save(Path.Combine(config["AppSettings:XMLTVOutputPath"], "XMLTV.xml"));
+            var xmlOutputPath = Path.Combine(config["AppSettings:XMLTVOutputPath"], "XMLTV.xml");
+            doc.Save(xmlOutputPath);
+            Compress(xmlOutputPath);
             //var wr = new StringWriter();
             //doc.Save(wr);
             //Console.Write(wr.ToString());            
@@ -244,6 +247,25 @@ namespace XMLTVGenerator
             var utcOffset = tst.GetUtcOffset(newDate);
             var offsetString = ((utcOffset < TimeSpan.Zero) ? " -" : " +") + utcOffset.ToString("hhmm");
             return $"{date:yyyyMMddHHmmss} {offsetString}";
+        }
+
+        private void Compress(string xmlFilePath)
+        {            
+            var fileToCompress = new FileInfo(xmlFilePath);
+
+            logger.Information("Arhiva {0} izveidošana ...", fileToCompress.Name + ".gz");
+            using (var originalFileStream = fileToCompress.OpenRead())
+            {                
+                using (var compressedFileStream = File.Create(fileToCompress.FullName + ".gz"))
+                {
+                    using (var compressionStream = new GZipStream(compressedFileStream, CompressionMode.Compress))
+                    {
+                        originalFileStream.CopyTo(compressionStream);
+                    }
+                }                            
+            }
+
+            logger.Information("Izveidots arhīvs {0}", fileToCompress.Name + ".gz");
         }
 
         #endregion
