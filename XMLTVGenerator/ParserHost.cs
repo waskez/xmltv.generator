@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Parser.Html;
+using Microsoft.Extensions.Configuration;
 using ParserContracts;
 using Serilog;
 using System;
@@ -18,6 +19,7 @@ namespace XMLTVGenerator
         #region Fields
 
         private readonly ILogger logger;
+        private readonly IConfiguration config;
         private readonly HttpClient client;
         private readonly string baseDirectory;
 
@@ -25,9 +27,10 @@ namespace XMLTVGenerator
 
         #region Constructor
 
-        public ParserHost(ILogger logger, string baseDirectory)
+        public ParserHost(ILogger logger, IConfiguration config, string baseDirectory)
         {
             this.logger = logger;
+            this.config = config;
             this.baseDirectory = baseDirectory;
             client = new HttpClient();
         }
@@ -226,7 +229,7 @@ namespace XMLTVGenerator
             }
 
             doc.Add(root);
-            doc.Save("XMLTV.xml");
+            doc.Save(Path.Combine(config["AppSettings:XMLTVOutputPath"], "XMLTV.xml"));
             //var wr = new StringWriter();
             //doc.Save(wr);
             //Console.Write(wr.ToString());            

@@ -34,7 +34,7 @@ namespace XMLTVGenerator
                         .WriteTo.RollingFile(BaseDirectory + @"\Logs\{Date}.txt")
                         .CreateLogger();
 
-            var host = new ParserHost(logger, BaseDirectory);
+            var host = new ParserHost(logger, config, BaseDirectory);
 
             var loadShuraTv = config["AppSettings:LoadShuraTvEpg"] == "True";
 
